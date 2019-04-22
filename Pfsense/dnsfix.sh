@@ -1,12 +1,32 @@
 #!/bin/bash
 
-cached=$(awk -F'|' '{print $1}' /conf/dyndns_opt5custom\'\'1.cache)
-fetched=$(curl -s 'https://api.ipify.org/' --interface dc1)
+# fixes missing dyndns Update with Not changing WAN IPs
+# Parameter 1: WAN interface 
+# Parameter 2: Filename without folder an extension 
 
-if [ "$cached" = "$fetched" ]; then
-  echo dnsok
+function echlog {
+ echo "DNSFix: $1"
+ logger "DNSFix: $1"
+} 
+
+if [ $# - eq 2] 
+ interface=$1
+ file=$(/conf/$2.cache)
+
+ if [ -f $file] 
+  cached=$(awk -F'|' '{print $1}' $file) 
+  fetched=$(curl -s 'https://api.ipify.org/' --interface $interface) 
+
+  if [ "$cached" = "$fetched" ]; then
+   echlog "ok" 
+  else
+   echlog "fixing" 
+   /etc/rc.dyndns.update;
+  fi
+ else
+   echlog "dns file is missing" 
+   /etc/rc.dyndns.update;
+ fi
 else
-  echo dnsfix
-  rm -- /conf/dyndns_opt5custom\'\'*.cache;
-  /etc/rc.dyndns.update;
+ echlog "wrong arguments" 
 fi
